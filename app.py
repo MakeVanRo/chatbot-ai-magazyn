@@ -1,8 +1,8 @@
 import streamlit as st
 from openai import OpenAI
 
-# Inicjalizacja klienta OpenAI z twoim kluczem API
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
 st.title("Chatbot AI do analizy magazynu i sprzedaży")
 
 user_question = st.text_input("Zadaj pytanie:")
