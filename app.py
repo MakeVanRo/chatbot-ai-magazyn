@@ -2,46 +2,59 @@ import streamlit as st
 from openai import OpenAI
 import gspread
 from google.oauth2.service_account import Credentials
+from gspread.exceptions import SpreadsheetNotFound, WorksheetNotFound
 
 # Konfiguracja GPT
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Konfiguracja Google Sheets (klucz API w sekcji Secrets)
-google_credentials = Credentials.from_service_account_info(st.secrets["google_credentials"])
-gc = gspread.authorize(google_credentials)
+# Konfiguracja Google Sheets
+try:
+    google_credentials = Credentials.from_service_account_info(st.secrets["google_credentials"])
+    gc = gspread.authorize(google_credentials)
+except Exception as e:
+    st.error("❌ Błąd autoryzacji Google Sheets. Sprawdź sekcję `secrets`.")
+    st.stop()
 
-# Wczytaj arkusz
-spreadsheet = gc.open("Nazwa_Twojego_arkusza")
-worksheet = spreadsheet.worksheet("produkty_magazyn")
+# Próbuj wczytać arkusz
+try:
+    spreadsheet = gc.open("Subiekt API")  # ← Zmień na dokładną nazwę swojego arkusza
+    worksheet = spreadsheet.worksheet("produkty_magazyn")  # ← lub zmień na odpowiednią zakładkę
+except SpreadsheetNotFound:
+    st.error("❌ Nie znaleziono arkusza 'Subiekt API'. Upewnij się, że nazwa jest poprawna i że konto serwisowe ma dostęp.")
+    st.stop()
+except WorksheetNotFound:
+    st.error("❌ Nie znaleziono zakładki 'produkty_magazyn'. Sprawdź, czy taka istnieje.")
+    st.stop()
 
-st.title("Chatbot AI z integracją Google Sheets")
+# UI
+st.title("🤖 Chatbot AI z Google Sheets")
 
-user_question = st.text_input("Zadaj pytanie lub polecenie do aktualizacji arkusza:")
+user_question = st.text_input("Zadaj pytanie lub polecenie dotyczące danych:")
 
-if st.button("Wyślij"):
-    response = client.chat.completions.create(
-        model="gpt-4.1",
-        messages=[
-            {"role": "system", "content": "Interpretujesz polecenia użytkownika dotyczące aktualizacji etykiet produktów w Google Sheets."},
-            {"role": "user", "content": user_question}
-        ],
-        temperature=0.2,
-        max_tokens=500
-    )
-    answer = response.choices[0].message.content
+if st.button("Wyślij") and user_question:
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4.0",  # lub gpt-4.1 jeśli masz dostęp
+            messages=[
+                {"role": "system", "content": "Jesteś asystentem do aktualizacji danych magazynowych w Google Sheets."},
+                {"role": "user", "content": user_question}
+            ],
+            temperature=0.2,
+            max_tokens=500
+        )
+        answer = response.choices[0].message.content
+        st.write("🧠 Odpowiedź AI:", answer)
 
-    # Przykładowe polecenie: "Dodaj etykietę butelki E-401-BUT do lakieru 401"
-    if "Dodaj etykietę" in user_question:
-        product_name = "Lakier 401 Glossy 8ml"  # tutaj można automatycznie rozpoznać z GPT
-        label_code = "E-401-BUT"  # analogicznie, wyciągnąć z pytania
-        
-        # Znajdź produkt w arkuszu
-        cell = worksheet.find(product_name)
-        row_number = cell.row
+        # Prosty przykład: przetwarzanie polecenia
+        if "Dodaj etykietę" in user_question:
+            product_name = "Lakier 401 Glossy 8ml"
+            label_code = "E-401-BUT"
 
-        # Zapisz w odpowiedniej kolumnie (np. kolumna F: "Kod etykiety butelka")
-        worksheet.update_cell(row_number, 6, label_code)
-        
-        st.success(f"Dodano {label_code} do produktu {product_name} w arkuszu.")
+            cell = worksheet.find(product_name)
+            row_number = cell.row
+            worksheet.update_cell(row_number, 6, label_code)
 
-    st.write("Odpowiedź AI:", answer)
+            st.success(f"Dodano etykietę '{label_code}' do produktu '{product_name}'.")
+
+    except Exception as e:
+        st.error(f"❌ Wystąpił błąd podczas przetwarzania: {e}")
