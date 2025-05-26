@@ -16,9 +16,16 @@ except Exception as e:
     st.stop()
 
 # Próbuj wczytać arkusz
+# TEST: Czy mamy dostęp do plików na Google Drive
 try:
-    spreadsheet = gc.open("Subiekt API")  # ← Zmień na dokładną nazwę swojego arkusza
-    worksheet = spreadsheet.worksheet("produkty_magazyn")  # ← lub zmień na odpowiednią zakładkę
+    files = gc.openall()
+    st.success("📄 Znalezione arkusze:")
+    for f in files:
+        st.write(f"📘 {f.title}")
+except Exception as e:
+    st.error("❌ Błąd podczas pobierania listy arkuszy. Sprawdź, czy konto serwisowe ma dostęp i poprawne API.")
+    st.code(str(e))
+    st.stop()
 except SpreadsheetNotFound:
     st.error("❌ Nie znaleziono arkusza 'Subiekt API'. Upewnij się, że nazwa jest poprawna i że konto serwisowe ma dostęp.")
     st.stop()
