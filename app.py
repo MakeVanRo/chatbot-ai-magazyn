@@ -10,9 +10,18 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("🧪 Test połączenia z Google Sheets")
 
+# 👉 DODANE: zakresy dostępu
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
 # Autoryzacja Google
 try:
-    credentials = Credentials.from_service_account_info(st.secrets["google_credentials"])
+    credentials = Credentials.from_service_account_info(
+        st.secrets["google_credentials"],
+        scopes=SCOPES
+    )
     gc = gspread.authorize(credentials)
     st.success("✅ Autoryzacja Google przebiegła pomyślnie.")
 except Exception as e:
